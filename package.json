@@ -14,5 +14,8 @@
     "key"
   ],
   "author": "me",
-  "license": "GPLv3"
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "selenium-webdriver": "^4.0.0-alpha.1"
+  }
 }
