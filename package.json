@@ -16,6 +16,7 @@
   "author": "me",
   "license": "GPL-3.0-or-later",
   "dependencies": {
+    "chromedriver": "^2.35.0",
     "selenium-webdriver": "^4.0.0-alpha.1"
   }
 }
