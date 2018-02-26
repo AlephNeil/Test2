@@ -17,6 +17,7 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "chromedriver": "^2.35.0",
-    "selenium-webdriver": "^4.0.0-alpha.1"
+    "selenium-webdriver": "^4.0.0-alpha.1",
+    "strftime": "^0.10.0"
   }
 }

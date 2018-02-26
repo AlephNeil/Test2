@@ -72,10 +72,25 @@ googSearch('32 Harbury Road', () => {
     driver.executeScript(myscript).then(res => {
         var alpha = res
             .map(s => matchie(postCodePtrn, s, 60))
-            .filter(x => x !== null)
-            .forEach((tup, i) => {
-                console.log(i+','+tup[0]+','+tup[1]);
-            });
+            .filter(x => x !== null);
+        var beta = {};
+        var gamma = {};
+        alpha.forEach(tup => {
+            var pc = tup[0];
+            if (pc in beta) {
+                beta[pc]++;
+            } else {
+                beta[pc] = 1;
+                gamma[pc] = tup[1];
+            }
+        });
+        for (var pc in beta) {
+            console.log(`"${pc}",${beta[pc]},"${gamma[pc]}"`)
+        }
+
+            // .forEach((tup, i) => {
+            //     console.log(i+','+tup[0]+','+tup[1]);
+            // });
         // console.log(alpha);
         console.log("Goodbye!");
     });
