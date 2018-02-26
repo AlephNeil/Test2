@@ -1,40 +1,18 @@
 'use strict';
 
-// console.log('Hello world!');
-// const myname = "Neil"
-// const blah = `alpha ${myname} beta`
-// console.log(`The value of blah is ${blah}`)
-
-// var webdriver = require('selenium-webdriver');
-// var browser = new webdriver.Builder()
-//     .usingServer()
-//     .withCapabilities({'browserName': 'chrome'})
-//     .build();
-
-// browser.get('http://en.wikipedia.org/wiki/Wiki');
-// browser.findElements(webdriver.By.css('[href^="/wiki/"]'))
-//     .then(function(links) {
-//     console.log('Found', links.length, 'Wiki links.' )
-//     browser.quit();
-// });
-
-
 // div.srg = list of search results
 // div.rc = single result
 //  h3.r > a = the link part of the result
 //  span.st = the text part of the result
 
-
+const fs = require('fs');
 require('chromedriver');
-// const chromedriver = require('chromedriver');
 const webdriver = require('selenium-webdriver');
-// const cd = require('selenium-webdriver/chrome');
-// const options = new cd.Options();
-// options.setChromeBinaryPath(chromedriver.path);
-// options.addArguments('headless', 'disable-gpu');
+var events = require('events');
+var eventEmitter = new events.EventEmitter();
+
 const driver = new webdriver.Builder()
     .forBrowser('chrome')
-    //.setChromeOptions(options)
     .build();
 
 const prefix = "https://www.google.co.uk/"
@@ -56,7 +34,7 @@ function matchie(ptrn, s, n) {
 
 function googSearch(q, cb) {
     driver.get(prefix).then(res => {
-        var script = `document.getElementById('${eltId}').value = '${q}'`;
+        var script = `document.getElementById('${eltId}').value = '"${q}"'`;
         // console.log(script);
         driver.executeScript(script).then(res => {
             driver.executeScript(`document.getElementById('${formId}').submit()`)
@@ -64,37 +42,59 @@ function googSearch(q, cb) {
         });
     });
 }
+
+const rstream = fs.createReadStream('input.csv');
+const wstream = fs.createWriteStream('output.csv');
+
 console.log('here');
 const myscript = `var arr = document.querySelectorAll('span.st');
-return [].slice.call(arr).map(elt => elt.innerText );`
+return [].slice.call(arr).map(elt => elt.innerText);`
 
-googSearch('32 Harbury Road', () => {
-    driver.executeScript(myscript).then(res => {
-        var alpha = res
-            .map(s => matchie(postCodePtrn, s, 60))
-            .filter(x => x !== null);
-        var beta = {};
-        var gamma = {};
-        alpha.forEach(tup => {
-            var pc = tup[0];
-            if (pc in beta) {
-                beta[pc]++;
+var targets = [
+    '32 Harbury Road, Carshalton',
+    '46 Woodcote Road, Wallington',
+    '43 Osmond Gardens, Wallington',
+];
+
+var tgt_ind = 0;
+
+function iter() {
+    var tgt = targets[tgt_ind];
+    googSearch(tgt, () => {
+        driver.executeScript(myscript).then(res => {
+            var alpha = res
+                .map(s => matchie(postCodePtrn, s, 60))
+                .filter(x => x !== null);
+            var beta = {};
+            var gamma = {};
+            alpha.forEach(tup => {
+                var pc = tup[0];
+                if (pc in beta) {
+                    beta[pc]++;
+                } else {
+                    beta[pc] = 1;
+                    gamma[pc] = tup[1];
+                }
+            });
+            var maxCount = 0;
+            var result = null;
+            for (var pc in beta) {
+                if (beta[pc] > maxCount) {
+                    maxCount = beta[pc];
+                    result = [pc, gamma[pc]];
+                }
+            }
+            wstream.write(`"${tgt}","${result[0]}","${result[1]}"\n`);
+            // console.log(`"${tgt}","${result[0]}","${result[1]}"\n`);
+            // console.log(result);
+            tgt_ind += 1;
+            if (tgt_ind < targets.length) {
+                eventEmitter.emit('scream');
             } else {
-                beta[pc] = 1;
-                gamma[pc] = tup[1];
+                wstream.close();
             }
         });
-        for (var pc in beta) {
-            console.log(`"${pc}",${beta[pc]},"${gamma[pc]}"`)
-        }
-
-            // .forEach((tup, i) => {
-            //     console.log(i+','+tup[0]+','+tup[1]);
-            // });
-        // console.log(alpha);
-        console.log("Goodbye!");
     });
-});
-// function getMeTheCode(addr) {
-//     driver.get
-// }
+}
+eventEmitter.on('scream', iter);
+iter();
