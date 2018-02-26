@@ -75,11 +75,6 @@ lineReader.on('line', line => {
 lineReader.on('close', () => {
     iter();
 });
-// var targets = [
-//     '32 Harbury Road, Carshalton',
-//     '46 Woodcote Road, Wallington',
-//     '43 Osmond Gardens, Wallington',
-// ];
 
 var tgt_ind = 0;
 
