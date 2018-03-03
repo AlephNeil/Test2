@@ -36,6 +36,7 @@ function matchie(ptrn, s, n) {
     return [pc, pref];
 }
 
+// This function is not in use
 function googSearch(q, cb) {
     driver.get(prefix).then(res => {
         var script = `document.getElementById('${eltId}').value = '"${jsesc(q)}"'`;
