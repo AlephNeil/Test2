@@ -21,6 +21,7 @@ const driver = new webdriver.Builder()
 const prefix = "https://www.google.co.uk/"
 const eltId = 'lst-ib'
 const formId = 'tsf'
+const deathMessage = 'Our systems have detected unusual traffic from your computer network'
 
 const postCodePtrn = /\b[A-Z]{1,2}[O0-9]{1,2}[A-Z]?\s[0-9][A-Z]{2}\b/;
 
@@ -46,13 +47,29 @@ function googSearch(q, cb) {
     });
 }
 
+const rl = require('readline').createInterface({
+    output: process.stdout, 
+    input: process.stdin
+});
+
+const all_results = {};
 function googSearch2(q, cb) {
-    driver.get(prefix + `search?q="${q.replace(' ', '+')}"`).then(res => {
-        cb();
-    });
+    if (q in all_results) {
+        cb(true, all_results[q]);
+    } else {
+        driver.get(prefix + `search?q="${q.replace(' ', '+')}"`).then(res => {
+            driver.executeScript(`return /${deathMessage}/.test(document.body.innerText);`).then(res => {
+                if (res) {
+                    rl.question('Is it safe?', ans => { cb(false, null); });
+                } else {
+                    cb(false, null);
+                }
+            });
+        });
+    }
 }
 
-const rstream = fs.createReadStream('input.csv');
+const rstream = fs.createReadStream('input2.csv');
 const wstream = fs.createWriteStream('output.csv');
 
 const myscript = `var arr = document.querySelectorAll('span.st');
@@ -84,39 +101,48 @@ function iter() {
         lastbit(`"","",""`)
         return;
     }
-    googSearch2(tgt, () => {
-        driver.executeScript(myscript).then(res => {
-            var alpha = res
-                .map(s => matchie(postCodePtrn, s, 60))
-                .filter(x => x !== null);
-            var beta = {};
-            var gamma = {};
-            alpha.forEach(tup => {
-                var pc = tup[0];
-                if (pc in beta) {
-                    beta[pc]++;
-                } else {
-                    beta[pc] = 1;
-                    gamma[pc] = tup[1];
-                }
-            });
-            var maxCount = 0;
-            var result = null;
-            for (var pc in beta) {
-                if (beta[pc] > maxCount) {
-                    maxCount = beta[pc];
-                    result = [pc, gamma[pc]];
-                }
-            }
-
-            sleep(20000 + 5000*Math.random());
-
+    googSearch2(tgt, (b, r) => {
+        if (b) {
+            let result = r; 
             if (result) {
                 lastbit(`"${tgt}","${result[0]}","${result[1]}"`);
             } else {
                 lastbit(`"${tgt}","",""`);
             }
-        });
+        } else {
+            driver.executeScript(myscript).then(res => {
+                const alpha = res
+                    .map(s => matchie(postCodePtrn, s, 60))
+                    .filter(x => x !== null);
+                const beta = {};
+                const gamma = {};
+                alpha.forEach(tup => {
+                    let [pc, ctxt] = tup;
+                    if (pc in beta) {
+                        beta[pc]++;
+                    } else {
+                        beta[pc] = 1;
+                        gamma[pc] = ctxt;
+                    }
+                });
+                let maxCount = 0;
+                let result = null;
+                for (var pc in beta) {
+                    if (beta[pc] > maxCount) {
+                        maxCount = beta[pc];
+                        result = [pc, gamma[pc]];
+                    }
+                }
+
+                sleep(500 + 1500*Math.random());
+                all_results[tgt] = result;
+                if (result) {
+                    lastbit(`"${tgt}","${result[0]}","${result[1]}"`);
+                } else {
+                    lastbit(`"${tgt}","",""`);
+                }
+            });
+        }
     });
 }
 
