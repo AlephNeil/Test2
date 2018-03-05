@@ -76,6 +76,9 @@ const wstream = fs.createWriteStream('output.csv');
 const myscript = `var arr = document.querySelectorAll('span.st');
 return [].slice.call(arr).map(elt => elt.innerText);`
 
+const vkbook = `const elt = document.querySelector('.vk_sh.vk_bk');
+return elt ? elt.innerText : null;`
+
 var lineReader = require('readline').createInterface({
     input: rstream,
 });
@@ -111,37 +114,39 @@ function iter() {
                 lastbit(`"${tgt}","",""`);
             }
         } else {
-            driver.executeScript(myscript).then(res => {
-                const alpha = res
-                    .map(s => matchie(postCodePtrn, s, 60))
-                    .filter(x => x !== null);
-                const beta = {};
-                const gamma = {};
-                alpha.forEach(tup => {
-                    let [pc, ctxt] = tup;
-                    if (pc in beta) {
-                        beta[pc]++;
+            driver.executeScript(vkbook).then(zeta => {
+                driver.executeScript(myscript).then(res => {
+                    const alpha = [zeta].concat(res)
+                        .map(s => matchie(postCodePtrn, s, 60))
+                        .filter(x => x !== null);
+                    const beta = {};
+                    const gamma = {};
+                    alpha.forEach(tup => {
+                        let [pc, ctxt] = tup;
+                        if (pc in beta) {
+                            beta[pc]++;
+                        } else {
+                            beta[pc] = 1;
+                            gamma[pc] = ctxt;
+                        }
+                    });
+                    let maxCount = 0;
+                    let result = null;
+                    for (var pc in beta) {
+                        if (beta[pc] > maxCount) {
+                            maxCount = beta[pc];
+                            result = [pc, gamma[pc]];
+                        }
+                    }
+
+                    sleep(1000 + 5000*Math.random());
+                    all_results[tgt] = result;
+                    if (result) {
+                        lastbit(`"${tgt}","${result[0]}","${result[1]}"`);
                     } else {
-                        beta[pc] = 1;
-                        gamma[pc] = ctxt;
+                        lastbit(`"${tgt}","",""`);
                     }
                 });
-                let maxCount = 0;
-                let result = null;
-                for (var pc in beta) {
-                    if (beta[pc] > maxCount) {
-                        maxCount = beta[pc];
-                        result = [pc, gamma[pc]];
-                    }
-                }
-
-                sleep(500 + 1500*Math.random());
-                all_results[tgt] = result;
-                if (result) {
-                    lastbit(`"${tgt}","${result[0]}","${result[1]}"`);
-                } else {
-                    lastbit(`"${tgt}","",""`);
-                }
             });
         }
     });
